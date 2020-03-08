@@ -9,15 +9,7 @@ import shlex
 import decorator
 
 
-EnvArgRecord = collections.namedtuple\
-        ( "EnvArgRecord"
-        , [ "a"
-          , "k"
-          , "f"
-          , "v"
-          , "p"
-          ]
-        )
+EnvArgRecord = collections.namedtuple("EnvArgRecord", ["a", "k", "f", "v", "p"])
 # This record is attached to all actions presenting the environment-variable
 # key, whether or not the environment-variable value is actually set.
 EnvArgRecord.__doc__ = "Record of associated environment-variable values."
@@ -83,8 +75,7 @@ class EnvArgParser(argparse.ArgumentParser):
         self._parsing_depth = max(value, 0)
 
     def add_argument(self, *args, **kwargs):
-        map_f = (lambda m,k,f=None,d=False:
-                    (k, k in m, m.pop(k,f) if d else m.get(k,f)))
+        map_f = (lambda m, k, f=None, d=False: (k, k in m, m.pop(k, f) if d else m.get(k, f)))
 
         env_k = map_f(kwargs, self.env_k, d=True, f="")
         env_f = map_f(kwargs, self.env_f, d=True, f=self.env_var_parse)
@@ -126,13 +117,11 @@ class EnvArgParser(argparse.ArgumentParser):
         if env_k[1]:
             if env_v[1] and action.required:
                 action.required = False
-            i = EnvArgRecord\
-                    ( a=action
-                    , k = env_k[2]
-                    , f = env_f[2]
-                    , v = env_v[2]
-                    , p = env_v[1]
-                    )
+            i = EnvArgRecord(a=action,
+                             k=env_k[2],
+                             f=env_f[2],
+                             v=env_v[2],
+                             p=env_v[1])
             setattr(action, env_k[0], i)
 
         return action
@@ -165,11 +154,9 @@ class EnvArgParser(argparse.ArgumentParser):
 
         return namespace, arg_extras
 
-    parse_known_args = setup_parse\
-            (argparse.ArgumentParser.parse_known_args)
+    parse_known_args = setup_parse(argparse.ArgumentParser.parse_known_args)
 
-    parse_known_intermixed_args = setup_parse\
-            (argparse.ArgumentParser.parse_known_intermixed_args)
+    # parse_known_intermixed_args = setup_parse(argparse.ArgumentParser.parse_known_intermixed_args)
 
     @decorator.decorator
     def argument_error_and_exit(f, self, *args, **kwargs):
@@ -212,7 +199,7 @@ class EnvArgParser(argparse.ArgumentParser):
             # now mark the action as seen even though it may be redundant.
             self.seen_actions.add(action)
             # Parse the environment variable.
-            v,e = i.f(self, i.a, i.k, i.v)
+            v, e = i.f(self, i.a, i.k, i.v)
             # From the main loop of "_parse_known_args". Treat additional
             # environment variable arguments just like additional command-line
             # arguments (which will eventually raise an exception).
@@ -376,49 +363,5 @@ class EnvArgHelpFormatter(argparse.HelpFormatter):
 
 
 # An example mix-in.
-class EnvArgDefaultsHelpFormatter\
-        ( EnvArgHelpFormatter
-        , argparse.ArgumentDefaultsHelpFormatter
-        ):
+class EnvArgDefaultsHelpFormatter(EnvArgHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):
     pass
-
-
-if __name__ == "__main__":
-    # An example program:
-    parser = EnvArgParser\
-            ( prog="Test Program"
-            , formatter_class=EnvArgDefaultsHelpFormatter
-            )
-
-    parser.add_argument\
-            ( '--bar'
-            , required=True
-            , env_var="BAR"
-            , type=int
-            , nargs="+"
-            , default=22
-            , help="Help message for bar."
-            )
-
-    parser.add_argument\
-            ( 'baz'
-            , type=int
-            )
-
-    args = parser.parse_args()
-    print(args)
-
-    # Example program output:
-    #
-    # $ BAR="1 2 3 '45  ' 6 7" ./envargparse.py 123
-    # Namespace(bar=[1, 2, 3, 45, 6, 7], baz=123)
-    #
-    # $ ./envargparse.py -h
-    # usage: Test Program [-h] --bar BAR [BAR ...] baz
-    #
-    # positional arguments:
-    #   baz
-    #
-    # optional arguments:
-    #   -h, --help           show this help message and exit
-    #   --bar BAR [BAR ...]  Help message for bar. (default: 22) (env_var: BAR)
